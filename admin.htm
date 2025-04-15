@@ -155,7 +155,10 @@
         for (let seller in allSalesData) {
           const btn = document.createElement("button");
           btn.innerText = seller;
-          btn.onclick = () => showSalesForSeller(seller, allSalesData[seller]);
+          btn.onclick = () => {
+  window.location.href = `sales-by-seller.html?seller=${encodeURIComponent(seller)}`;
+};
+
           sellersListDiv.appendChild(btn);
         }
       });
@@ -172,15 +175,17 @@
       for (let key in entries) {
         const e = entries[key];
         const row = document.createElement("tr");
-        row.innerHTML = `
+row.innerHTML = `
   <td>${seller}</td>
   <td>${e.ticketNo || 'N/A'}</td>
-  <td>${e.customerName}</td>
-  <td>${e.customerContact}</td>
-  <td>${e.ticketType}</td>
-  <td>${e.amountPaid}</td>
-  <td>${e.paymentMethod}</td>
+  <td contenteditable="true">${e.customerName}</td>
+  <td contenteditable="true">${e.customerContact}</td>
+  <td contenteditable="true">${e.ticketType}</td>
+  <td contenteditable="true">${e.amountPaid}</td>
+  <td contenteditable="true">${e.paymentMethod}</td>
+  <td><button onclick="saveEdit('${seller}', '${key}', this)">💾 Save</button></td>
 `;
+
         salesBody.appendChild(row);
 
         if (!totalPerType[e.ticketType]) totalPerType[e.ticketType] = 0;
@@ -242,7 +247,10 @@ salesBody.appendChild(row);
       exportTableToExcel("salesTable", title);
     });
 
-    document.getElementById("viewAllBtn").addEventListener("click", showAllSales);
+    document.getElementById("viewAllBtn").addEventListener("click", () => {
+  window.location.href = "all-sales.html";
+});
+
 
     document.getElementById("viewTicketTypeBtn").addEventListener("click", () => {
       window.location.href = "ticket-type-analysis.html";

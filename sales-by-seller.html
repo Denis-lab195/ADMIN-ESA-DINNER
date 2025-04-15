@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sales by Seller</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f9fc;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #0044cc;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #0044cc;
+      color: white;
+    }
+
+    .totals {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    #backBtn {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button id="backBtn" onclick="window.location.href='admin.htm'">🔙 Back to Dashboard</button>
+  <h2 id="sellerNameHeader"></h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Seller</th>
+        <th>Ticket No</th>
+        <th>Customer Name</th>
+        <th>Contact</th>
+        <th>Ticket Type</th>
+        <th>Amount Paid</th>
+        <th>Payment Method</th>
+      </tr>
+    </thead>
+    <tbody id="salesBody"></tbody>
+  </table>
+
+  <div class="totals" id="summaryData"></div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL_ZAAACf2w0f3pl6twgQaFv4heUOPnP0",
+      authDomain: "esa-mmust.firebaseapp.com",
+      databaseURL: "https://esa-mmust-default-rtdb.firebaseio.com",
+      projectId: "esa-mmust",
+      storageBucket: "esa-mmust.appspot.com",
+      messagingSenderId: "1032408799607",
+      appId: "1:1032408799607:web:ec6385b2f6e19d00baa972",
+      measurementId: "G-XQ32GJJ7F7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const sellerName = urlParams.get("seller");
+
+    const salesBody = document.getElementById("salesBody");
+    const summaryData = document.getElementById("summaryData");
+    const sellerNameHeader = document.getElementById("sellerNameHeader");
+
+    if (sellerName) {
+      sellerNameHeader.textContent = `Sales by ${sellerName}`;
+
+      const sellerRef = ref(database, `sales/${sellerName}`);
+      onValue(sellerRef, snapshot => {
+        const entries = snapshot.val() || {};
+        salesBody.innerHTML = "";
+
+        let totalPerType = {};
+        let grandTotal = 0;
+
+        for (let key in entries) {
+          const e = entries[key];
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${sellerName}</td>
+            <td>${e.ticketNo || 'N/A'}</td>
+            <td>${e.customerName}</td>
+            <td>${e.customerContact}</td>
+            <td>${e.ticketType}</td>
+            <td>${e.amountPaid}</td>
+            <td>${e.paymentMethod}</td>
+          `;
+          salesBody.appendChild(row);
+
+          if (!totalPerType[e.ticketType]) totalPerType[e.ticketType] = 0;
+          totalPerType[e.ticketType] += parseFloat(e.amountPaid);
+          grandTotal += parseFloat(e.amountPaid);
+        }
+
+        let summary = "<h4>Summary</h4>";
+        for (let type in totalPerType) {
+          summary += `${type}: KES ${totalPerType[type].toFixed(2)}<br>`;
+        }
+        summary += `<br><strong>Total Amount to Account For: KES ${grandTotal.toFixed(2)}</strong>`;
+        summaryData.innerHTML = summary;
+      });
+    } else {
+      sellerNameHeader.textContent = "Seller not found in URL.";
+    }
+  </script>
+</body>
+</html>

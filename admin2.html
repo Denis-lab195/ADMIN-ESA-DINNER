@@ -1,104 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard - Ticket Sales</title>
+  <meta charset="UTF-8">
+  <title>Final Attendees List</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #eef2f7;
-      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      padding: 30px;
+      color: #333;
     }
-
-    h2, h3 {
+    h2 {
       text-align: center;
-      color: #0044cc;
+      margin-bottom: 10px;
     }
-
-    #sellersList button, #viewAllBtn, #viewTicketTypeBtn{
-      display: block;
-      width: 100%;
-      padding: 10px;
-      margin: 5px auto;
-      max-width: 300px;
-      font-weight: bold;
-      border-radius: 5px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
+    p.subheading {
+      text-align: center;
+      font-style: italic;
+      color: #666;
     }
-
-    #sellersList button:hover, #viewAllBtn:hover {
-      background-color: #0056b3;
-    }
-
     table {
       width: 100%;
-      margin-top: 20px;
       border-collapse: collapse;
+      margin-top: 30px;
+      font-size: 14px;
     }
-
     th, td {
+      border: 1px solid #aaa;
       padding: 10px;
-      border: 1px solid #ccc;
       text-align: left;
     }
-
     th {
-      background-color: #0044cc;
+      background-color: #1a237e;
       color: white;
     }
-
-    #exportBtn {
-      background-color: green;
-      color: white;
+    tr:nth-child(even) {
+      background-color: #f0f0f0;
+    }
+    #attendeesSection {
+      display: none;
+    }
+    #loginSection {
+      text-align: center;
+      margin-top: 100px;
+    }
+    input[type="password"] {
       padding: 10px;
+      font-size: 18px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #1a237e;
+      color: white;
       border: none;
-      margin-top: 10px;
       border-radius: 5px;
       cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover {
+      background-color: #0d154c;
+    }
+    .actions {
+      text-align: center;
+      margin-top: 25px;
     }
 
-    #exportBtn:hover {
-      background-color: darkgreen;
-    }
-
-    .totals {
-      margin-top: 20px;
-      font-weight: bold;
-      font-size: 1.1em;
+    /* Print Styles */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+      #loginSection, .actions {
+        display: none !important;
+      }
+      #attendeesSection {
+        display: block !important;
+      }
+      table {
+        font-size: 12px;
+      }
     }
   </style>
 </head>
 <body>
-  <h2>Admin Ticket Sales Dashboard</h2>
 
-  <button id="viewAllBtn">📊 View All Sales Entries</button>
-  <button id="viewTicketTypeBtn">🎟️ View Ticket Type Analysis</button>
-  <h3>List of Salespersons</h3>
-  <div id="sellersList"></div>
-
-  <div id="sellerData" style="display:none;">
-    <h3 id="sellerNameHeader"></h3>
-    <table id="salesTable">
-      <thead>
-        <tr>
-          <th>Seller</th>
-          <th>Customer Name</th>
-          <th>Contact</th>
-          <th>Ticket Type</th>
-          <th>Amount Paid</th>
-          <th>Payment Method</th>
-        </tr>
-      </thead>
-      <tbody id="salesBody"></tbody>
-    </table>
-    <div class="totals" id="summaryData"></div>
-    <button id="exportBtn">Export to Excel</button>
+  <div id="loginSection">
+    <h2>🔐 Final Attendees List Access</h2>
+    <p>Enter the authorized password to view and print the final list.</p>
+    <input type="password" id="passwordInput" placeholder="Enter Password">
+    <br>
+    <button onclick="checkPassword()">Unlock</button>
   </div>
 
+  <div id="attendeesSection">
+    
+    <div id="printArea">
+      <h2>ENGINEERING STUDENTS ASSOCIATION (ESA-MMUST)</h2>
+      <h2>Final DinnerAttendees List</h2>
+      <p class="subheading">Authorized, Approved & Verified Ticket Holders</p>
+      <table id="attendeesTable">
+        <thead>
+          <tr>
+            <th>Serial No.</th>
+            <th>Ticket No.</th>
+            <th>Customer Name</th>
+            <th>Contact</th>
+            <th>Ticket Type</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button onclick="window.print()">🖨️ Print PDF</button>
+    </div>
+  </div>
+
+  <!-- Firebase & Script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
@@ -108,7 +132,7 @@
       authDomain: "esa-mmust.firebaseapp.com",
       databaseURL: "https://esa-mmust-default-rtdb.firebaseio.com",
       projectId: "esa-mmust",
-      storageBucket: "esa-mmust.firebasestorage.app",
+      storageBucket: "esa-mmust.appspot.com",
       messagingSenderId: "1032408799607",
       appId: "1:1032408799607:web:ec6385b2f6e19d00baa972",
       measurementId: "G-XQ32GJJ7F7"
@@ -117,121 +141,64 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    const sellersListDiv = document.getElementById("sellersList");
-    const salesBody = document.getElementById("salesBody");
-    const sellerData = document.getElementById("sellerData");
-    const sellerNameHeader = document.getElementById("sellerNameHeader");
-    const summaryData = document.getElementById("summaryData");
+    const attendeesTableBody = document.querySelector("#attendeesTable tbody");
 
-    let allSalesData = {}; // cache sales data
+    function checkPassword() {
+      const entered = document.getElementById("passwordInput").value;
+      if (entered === "2025") {
+        document.getElementById("loginSection").style.display = "none";
+        document.getElementById("attendeesSection").style.display = "block";
+        loadApprovedAttendees();
+      } else {
+        alert("❌ Incorrect password.");
+      }
+    }
 
-    function loadSellers() {
-      const salesRef = ref(database, "sales/");
+    function loadApprovedAttendees() {
+      const salesRef = ref(database, "sales");
       onValue(salesRef, snapshot => {
         const data = snapshot.val();
-        allSalesData = data || {};
-        sellersListDiv.innerHTML = "";
+        if (!data) return;
 
-        for (let seller in allSalesData) {
-          const btn = document.createElement("button");
-          btn.innerText = seller;
-          btn.onclick = () => showSalesForSeller(seller, allSalesData[seller]);
-          sellersListDiv.appendChild(btn);
+        attendeesTableBody.innerHTML = "";
+        let serial = 1;
+        const attendees = [];
+
+        // Collect all approved attendees into an array
+        for (const seller in data) {
+          const records = data[seller];
+          for (const key in records) {
+            const sale = records[key];
+            if (sale.approved) {
+              attendees.push(sale);
+            }
+          }
         }
+
+        // Sort attendees by ticket number (ascending order)
+        attendees.sort((a, b) => {
+          const ticketA = a.ticketNo ? parseInt(a.ticketNo) : 0;
+          const ticketB = b.ticketNo ? parseInt(b.ticketNo) : 0;
+          return ticketA - ticketB;
+        });
+
+        // Add sorted attendees to the table
+        attendees.forEach((sale) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${serial++}</td>
+            <td>${sale.ticketNo || ""}</td>
+            <td>${sale.customerName || ""}</td>
+            <td>${sale.customerContact || ""}</td>
+            <td>${sale.ticketType || ""}</td>
+          `;
+          attendeesTableBody.appendChild(row);
+        });
       });
     }
 
-    function showSalesForSeller(seller, entries) {
-      sellerNameHeader.innerText = `Sales by ${seller}`;
-      salesBody.innerHTML = "";
-      sellerData.style.display = "block";
-
-      let totalPerType = {};
-      let grandTotal = 0;
-
-      for (let key in entries) {
-        const e = entries[key];
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${seller}</td>
-          <td>${e.customerName}</td>
-          <td>${e.customerContact}</td>
-          <td>${e.ticketType}</td>
-          <td>${e.amountPaid}</td>
-          <td>${e.paymentMethod}</td>
-        `;
-        salesBody.appendChild(row);
-
-        if (!totalPerType[e.ticketType]) totalPerType[e.ticketType] = 0;
-        totalPerType[e.ticketType] += parseFloat(e.amountPaid);
-        grandTotal += parseFloat(e.amountPaid);
-      }
-
-      displaySummary(totalPerType, grandTotal);
-    }
-
-    function showAllSales() {
-      sellerNameHeader.innerText = "All Sales Entries";
-      salesBody.innerHTML = "";
-      sellerData.style.display = "block";
-
-      let totalPerType = {};
-      let grandTotal = 0;
-
-      for (let seller in allSalesData) {
-        for (let key in allSalesData[seller]) {
-          const e = allSalesData[seller][key];
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${seller}</td>
-            <td>${e.customerName}</td>
-            <td>${e.customerContact}</td>
-            <td>${e.ticketType}</td>
-            <td>${e.amountPaid}</td>
-            <td>${e.paymentMethod}</td>
-          `;
-          salesBody.appendChild(row);
-
-          if (!totalPerType[e.ticketType]) totalPerType[e.ticketType] = 0;
-          totalPerType[e.ticketType] += parseFloat(e.amountPaid);
-          grandTotal += parseFloat(e.amountPaid);
-        }
-      }
-
-      displaySummary(totalPerType, grandTotal);
-    }
-    document.getElementById("viewTicketTypeBtn").addEventListener("click", () => {
-  window.location.href = "ticket-type-analysis.html";
-});
-
-
-    function displaySummary(totalPerType, grandTotal) {
-      let summary = "<h4>Summary</h4>";
-      for (let type in totalPerType) {
-        summary += `${type}: KES ${totalPerType[type].toFixed(2)}<br>`;
-      }
-      summary += `<br><strong>Total Amount to Account For: KES ${grandTotal.toFixed(2)}</strong>`;
-      summaryData.innerHTML = summary;
-    }
-
-    function exportTableToExcel(tableID, filename = '') {
-      const downloadLink = document.createElement("a");
-      const table = document.getElementById(tableID);
-      const html = table.outerHTML.replace(/ /g, '%20');
-      filename = filename ? filename + '.xls' : 'excel_data.xls';
-      downloadLink.href = 'data:application/vnd.ms-excel,' + html;
-      downloadLink.download = filename;
-      downloadLink.click();
-    }
-
-    document.getElementById("exportBtn").addEventListener("click", () => {
-      const title = sellerNameHeader.innerText.replace(/ /g, "_");
-      exportTableToExcel("salesTable", title);
-    });
-
-    document.getElementById("viewAllBtn").addEventListener("click", showAllSales);
-
-    loadSellers();
+    window.checkPassword = checkPassword;
   </script>
+
 </body>
 </html>
