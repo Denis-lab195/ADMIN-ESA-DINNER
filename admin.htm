@@ -254,7 +254,7 @@ salesBody.appendChild(row);
 
   // Header
   doc.setFontSize(12);
-  doc.text("ENGINEERING STUDENTS ASSOCIATION", 105, 20, { align: "center" });
+  doc.text("ENGINEERING STUDENTS ASSOCIATION ESA MMUST", 105, 20, { align: "center" });
   doc.text("SCHOOL OF ENGINEERING AND BUILT ENVIRONMENT", 105, 27, { align: "center" });
   doc.text("P.O BOX 190-50100, KAKAMEGA", 105, 34, { align: "center" });
   doc.text("Email: esa@student.mmust.ac.ke", 105, 41, { align: "center" });
@@ -297,7 +297,7 @@ salesBody.appendChild(row);
     }
   }
 
-  let y = 65;
+  let y = 60;
 
   Object.entries(grouped).forEach(([type, attendees], idx) => {
     if (attendees.length === 0) return;
@@ -314,7 +314,7 @@ salesBody.appendChild(row);
     ]);
 
     doc.autoTable({
-      startY: y + 10,
+      startY: y + 1,
       head: [[`${type} Attendees`, 'Name', 'Contact', 'Ticket No']],
       body: tableBody,
       styles: { fontSize: 10 },
@@ -322,7 +322,7 @@ salesBody.appendChild(row);
       margin: { top: 10 }
     });
 
-    y = doc.lastAutoTable.finalY + 10;
+    y = doc.lastAutoTable.finalY + 1;
 
     if (y > 250 && idx !== Object.entries(grouped).length - 1) {
       doc.addPage();
