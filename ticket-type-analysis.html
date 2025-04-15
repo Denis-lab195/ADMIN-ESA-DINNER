@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ticket Type Analysis</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      padding: 20px;
+    }
+
+    h2, h3 {
+      text-align: center;
+      color: #0044cc;
+    }
+
+    .ticket-btn {
+      display: block;
+      width: 100%;
+      max-width: 300px;
+      margin: 10px auto;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .ticket-btn:hover {
+      background-color: #0056b3;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #0044cc;
+      color: white;
+    }
+
+    #exportBtn {
+      margin-top: 10px;
+      background-color: green;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+
+    #exportBtn:hover {
+      background-color: darkgreen;
+    }
+
+    .totals {
+      font-weight: bold;
+      font-size: 1.1em;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Sales Analysis by Ticket Type</h2>
+  <div id="ticketTypesList"></div>
+
+  <div id="ticketData" style="display:none;">
+    <h3 id="ticketHeader"></h3>
+    <table id="ticketTable">
+      <thead>
+        <tr>
+          <th>Seller</th>
+          <th>Customer Name</th>
+          <th>Contact</th>
+          <th>Ticket Type</th>
+          <th>Amount Paid</th>
+          <th>Payment Method</th>
+        </tr>
+      </thead>
+      <tbody id="ticketBody"></tbody>
+    </table>
+    <div class="totals" id="ticketSummary"></div>
+    <button id="exportBtn">Export to Excel</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL_ZAAACf2w0f3pl6twgQaFv4heUOPnP0",
+      authDomain: "esa-mmust.firebaseapp.com",
+      databaseURL: "https://esa-mmust-default-rtdb.firebaseio.com",
+      projectId: "esa-mmust",
+      storageBucket: "esa-mmust.firebasestorage.app",
+      messagingSenderId: "1032408799607",
+      appId: "1:1032408799607:web:ec6385b2f6e19d00baa972",
+      measurementId: "G-XQ32GJJ7F7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const ticketTypesList = document.getElementById("ticketTypesList");
+    const ticketBody = document.getElementById("ticketBody");
+    const ticketData = document.getElementById("ticketData");
+    const ticketHeader = document.getElementById("ticketHeader");
+    const ticketSummary = document.getElementById("ticketSummary");
+
+    let allSalesData = {};
+
+    function loadTicketTypes() {
+      const salesRef = ref(db, "sales/");
+      onValue(salesRef, (snapshot) => {
+        const data = snapshot.val();
+        allSalesData = data || {};
+
+        const ticketTypes = new Set();
+
+        for (let seller in allSalesData) {
+          for (let id in allSalesData[seller]) {
+            const entry = allSalesData[seller][id];
+            if (entry.ticketType) {
+              ticketTypes.add(entry.ticketType);
+            }
+          }
+        }
+
+        ticketTypesList.innerHTML = "";
+        ticketTypes.forEach(type => {
+          const btn = document.createElement("button");
+          btn.className = "ticket-btn";
+          btn.innerText = type;
+          btn.onclick = () => showTicketTypeSales(type);
+          ticketTypesList.appendChild(btn);
+        });
+      });
+    }
+
+    function showTicketTypeSales(type) {
+      ticketHeader.innerText = `Sales for Ticket Type: ${type}`;
+      ticketBody.innerHTML = "";
+      ticketData.style.display = "block";
+
+      let total = 0;
+
+      for (let seller in allSalesData) {
+        for (let id in allSalesData[seller]) {
+          const e = allSalesData[seller][id];
+          if (e.ticketType === type) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${seller}</td>
+              <td>${e.customerName}</td>
+              <td>${e.customerContact}</td>
+              <td>${e.ticketType}</td>
+              <td>${e.amountPaid}</td>
+              <td>${e.paymentMethod}</td>
+            `;
+            ticketBody.appendChild(row);
+            total += parseFloat(e.amountPaid);
+          }
+        }
+      }
+
+      ticketSummary.innerHTML = `<br>Total for ${type}: KES ${total.toFixed(2)}`;
+    }
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const title = ticketHeader.innerText.replace(/ /g, "_");
+      const downloadLink = document.createElement("a");
+      const table = document.getElementById("ticketTable");
+      const html = table.outerHTML.replace(/ /g, '%20');
+      const filename = title + '.xls';
+      downloadLink.href = 'data:application/vnd.ms-excel,' + html;
+      downloadLink.download = filename;
+      downloadLink.click();
+    });
+
+    loadTicketTypes();
+  </script>
+</body>
+</html>
