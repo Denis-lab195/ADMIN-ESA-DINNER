@@ -99,6 +99,7 @@
       <thead>
         <tr>
           <th>Seller</th>
+          <th>Ticket No</th> <!-- New Column -->
           <th>Customer Name</th>
           <th>Contact</th>
           <th>Ticket Type</th>
@@ -172,13 +173,14 @@
         const e = entries[key];
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${seller}</td>
-          <td>${e.customerName}</td>
-          <td>${e.customerContact}</td>
-          <td>${e.ticketType}</td>
-          <td>${e.amountPaid}</td>
-          <td>${e.paymentMethod}</td>
-        `;
+  <td>${seller}</td>
+  <td>${e.ticketNo || 'N/A'}</td>
+  <td>${e.customerName}</td>
+  <td>${e.customerContact}</td>
+  <td>${e.ticketType}</td>
+  <td>${e.amountPaid}</td>
+  <td>${e.paymentMethod}</td>
+`;
         salesBody.appendChild(row);
 
         if (!totalPerType[e.ticketType]) totalPerType[e.ticketType] = 0;
@@ -201,16 +203,16 @@
         for (let key in allSalesData[seller]) {
           const e = allSalesData[seller][key];
           const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${seller}</td>
-            <td>${e.customerName}</td>
-            <td>${e.customerContact}</td>
-            <td>${e.ticketType}</td>
-            <td>${e.amountPaid}</td>
-            <td>${e.paymentMethod}</td>
-          `;
-          salesBody.appendChild(row);
-
+row.innerHTML = `
+  <td>${seller}</td>
+  <td>${e.ticketNo || 'N/A'}</td> <!-- ✅ Include Ticket No -->
+  <td>${e.customerName}</td>
+  <td>${e.customerContact}</td>
+  <td>${e.ticketType}</td>
+  <td>${e.amountPaid}</td>
+  <td>${e.paymentMethod}</td>
+`;
+salesBody.appendChild(row);
           if (!totalPerType[e.ticketType]) totalPerType[e.ticketType] = 0;
           totalPerType[e.ticketType] += parseFloat(e.amountPaid);
           grandTotal += parseFloat(e.amountPaid);
@@ -250,7 +252,7 @@
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  // Header details
+  // Header
   doc.setFontSize(12);
   doc.text("ENGINEERING STUDENTS ASSOCIATION", 105, 20, { align: "center" });
   doc.text("SCHOOL OF ENGINEERING AND BUILT ENVIRONMENT", 105, 27, { align: "center" });
@@ -260,7 +262,9 @@
   doc.setFontSize(14);
   doc.text("ESA Dinner ATTENDEES LIST 2025", 105, 49, { align: "center" });
   doc.text("GOLF HOTEL 17TH APRIL 2025", 105, 56, { align: "center" });
-  // Initialize groups for each ticket type
+
+  doc.setFontSize(12);
+
   let grouped = {
     VIP: [],
     Singles: [],
@@ -268,67 +272,65 @@
     "Group of five": [],
     "SEBE staff": [],
     Professionals: [],
-    Other: [] // Default to "Other" for unknown ticket types
+    Other: []
   };
 
-  // Collect all unique attendees and group them based on ticket type
+  // Group and de-duplicate data
   for (let seller in allSalesData) {
     for (let key in allSalesData[seller]) {
       const e = allSalesData[seller][key];
-      const ticketType = e.ticketType || "Other"; // Default to "Other" if ticketType is undefined or empty
-      const entryKey = `${e.customerName}-${e.customerContact}`;
+      const ticketType = e.ticketType || "Other";
+      const uniqueKey = `${e.customerName}-${e.customerContact}`;
 
-      // Ensure we have an array for each ticket type
       if (!grouped[ticketType]) {
         grouped[ticketType] = [];
       }
 
-      // Avoid duplicates
-      if (!grouped[ticketType].some(att => att.key === entryKey)) {
+      if (!grouped[ticketType].some(att => att.key === uniqueKey)) {
         grouped[ticketType].push({
-          key: entryKey,
-          name: e.customerName || "",
-          contact: e.customerContact || "",
-          ticketType: ticketType
+          key: uniqueKey,
+          name: e.customerName,
+          contact: e.customerContact,
+          ticketNo: e.ticketNo || "N/A"
         });
       }
     }
   }
 
-  // Flatten the array and prioritize ticket types (VIP first, then others)
-  let prioritizedAttendees = [];
-  prioritizedAttendees.push(...grouped["VIP"]);
-  prioritizedAttendees.push(...grouped["Couples"]);
-  prioritizedAttendees.push(...grouped["Singles"]);
-  prioritizedAttendees.push(...grouped["Group of five"]);
-  prioritizedAttendees.push(...grouped["SEBE staff"]);
-  prioritizedAttendees.push(...grouped["Professionals"]);
-  prioritizedAttendees.push(...grouped["Other"]); // Fallback to "Other"
+  let y = 65;
 
-  // Define the table headers
-  const headers = [["S/No", "Name of Attendee", "Contact", "Ticket Type", "Signature"]];
+  Object.entries(grouped).forEach(([type, attendees], idx) => {
+    if (attendees.length === 0) return;
 
-  // Prepare the table data
-  const tableData = prioritizedAttendees.map((a, i) => [
-    i + 1,
-    a.name,
-    a.contact,
-    a.ticketType,
-    ""
-  ]);
+    // Sort by name
+    attendees.sort((a, b) => a.name.localeCompare(b.name));
 
-  // Add the table to the PDF with adjusted margins
-  doc.autoTable({
-    startY: 60, // Adjust the starting Y-position to reduce top margin
-    head: headers,
-    body: tableData,
-    theme: "grid",
-    styles: { fontSize: 10 },
-    margin: { top: 20, left: 14, right: 14 }, // Reduced top margin
+    // Add serial numbers starting from 1
+    const tableBody = attendees.map((a, index) => [
+      index + 1,
+      a.name,
+      a.contact,
+      a.ticketNo
+    ]);
+
+    doc.autoTable({
+      startY: y + 10,
+      head: [[`${type} Attendees`, 'Name', 'Contact', 'Ticket No']],
+      body: tableBody,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [0, 102, 204] },
+      margin: { top: 10 }
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+
+    if (y > 250 && idx !== Object.entries(grouped).length - 1) {
+      doc.addPage();
+      y = 20;
+    }
   });
 
-  // Save the generated PDF
-  doc.save("ESA_Dinner_Attendees_List 2025.pdf");
+  doc.save("ESA_Attendees_List_2025.pdf");
 });
 
     loadSellers();
