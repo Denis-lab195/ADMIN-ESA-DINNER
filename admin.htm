@@ -16,7 +16,7 @@
       color: #0044cc;
     }
 
-    #sellersList button, #viewAllBtn, #viewTicketTypeBtn{
+    #sellersList button, #viewAllBtn, #viewTicketTypeBtn {
       display: block;
       width: 100%;
       padding: 10px;
@@ -51,7 +51,7 @@
       color: white;
     }
 
-    #exportBtn {
+    #exportBtn, #generatePdfBtn {
       background-color: green;
       color: white;
       padding: 10px;
@@ -59,6 +59,15 @@
       margin-top: 10px;
       border-radius: 5px;
       cursor: pointer;
+      display: block;
+      width: 100%;
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #generatePdfBtn {
+      background-color: #6f42c1;
     }
 
     #exportBtn:hover {
@@ -80,6 +89,7 @@
   </button>
   <button id="viewAllBtn">📊 View All Sales Entries</button>
   <button id="viewTicketTypeBtn">🎟️ View Ticket Type Analysis</button>
+  
   <h3>List of Salespersons</h3>
   <div id="sellersList"></div>
 
@@ -100,8 +110,13 @@
     </table>
     <div class="totals" id="summaryData"></div>
     <button id="exportBtn">Export to Excel</button>
+    <button id="generatePdfBtn">📄 Generate Attendees PDF</button>
   </div>
+
+  <!-- External Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -112,7 +127,7 @@
       authDomain: "esa-mmust.firebaseapp.com",
       databaseURL: "https://esa-mmust-default-rtdb.firebaseio.com",
       projectId: "esa-mmust",
-      storageBucket: "esa-mmust.firebasestorage.app",
+      storageBucket: "esa-mmust.appspot.com",
       messagingSenderId: "1032408799607",
       appId: "1:1032408799607:web:ec6385b2f6e19d00baa972",
       measurementId: "G-XQ32GJJ7F7"
@@ -127,7 +142,7 @@
     const sellerNameHeader = document.getElementById("sellerNameHeader");
     const summaryData = document.getElementById("summaryData");
 
-    let allSalesData = {}; // cache sales data
+    let allSalesData = {};
 
     function loadSellers() {
       const salesRef = ref(database, "sales/");
@@ -204,10 +219,6 @@
 
       displaySummary(totalPerType, grandTotal);
     }
-    document.getElementById("viewTicketTypeBtn").addEventListener("click", () => {
-  window.location.href = "ticket-type-analysis.html";
-});
-
 
     function displaySummary(totalPerType, grandTotal) {
       let summary = "<h4>Summary</h4>";
@@ -217,11 +228,12 @@
       summary += `<br><strong>Total Amount to Account For: KES ${grandTotal.toFixed(2)}</strong>`;
       summaryData.innerHTML = summary;
     }
+
     function exportTableToExcel(tableID, filename = 'sales_data') {
-  const table = document.getElementById(tableID);
-  const workbook = XLSX.utils.table_to_book(table, {sheet: "Sales"});
-  XLSX.writeFile(workbook, `${filename}.xlsx`);
-}
+      const table = document.getElementById(tableID);
+      const workbook = XLSX.utils.table_to_book(table, { sheet: "Sales" });
+      XLSX.writeFile(workbook, `${filename}.xlsx`);
+    }
 
     document.getElementById("exportBtn").addEventListener("click", () => {
       const title = sellerNameHeader.innerText.replace(/ /g, "_");
@@ -229,6 +241,95 @@
     });
 
     document.getElementById("viewAllBtn").addEventListener("click", showAllSales);
+
+    document.getElementById("viewTicketTypeBtn").addEventListener("click", () => {
+      window.location.href = "ticket-type-analysis.html";
+    });
+
+    document.getElementById("generatePdfBtn").addEventListener("click", () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Header details
+  doc.setFontSize(12);
+  doc.text("ENGINEERING STUDENTS ASSOCIATION", 105, 20, { align: "center" });
+  doc.text("SCHOOL OF ENGINEERING AND BUILT ENVIRONMENT", 105, 27, { align: "center" });
+  doc.text("P.O BOX 190-50100, KAKAMEGA", 105, 34, { align: "center" });
+  doc.text("Email: esa@student.mmust.ac.ke", 105, 41, { align: "center" });
+
+  doc.setFontSize(14);
+  doc.text("ESA Dinner ATTENDEES LIST 2025", 105, 49, { align: "center" });
+  doc.text("GOLF HOTEL 17TH APRIL 2025", 105, 56, { align: "center" });
+  // Initialize groups for each ticket type
+  let grouped = {
+    VIP: [],
+    Singles: [],
+    Couples: [],
+    "Group of five": [],
+    "SEBE staff": [],
+    Professionals: [],
+    Other: [] // Default to "Other" for unknown ticket types
+  };
+
+  // Collect all unique attendees and group them based on ticket type
+  for (let seller in allSalesData) {
+    for (let key in allSalesData[seller]) {
+      const e = allSalesData[seller][key];
+      const ticketType = e.ticketType || "Other"; // Default to "Other" if ticketType is undefined or empty
+      const entryKey = `${e.customerName}-${e.customerContact}`;
+
+      // Ensure we have an array for each ticket type
+      if (!grouped[ticketType]) {
+        grouped[ticketType] = [];
+      }
+
+      // Avoid duplicates
+      if (!grouped[ticketType].some(att => att.key === entryKey)) {
+        grouped[ticketType].push({
+          key: entryKey,
+          name: e.customerName || "",
+          contact: e.customerContact || "",
+          ticketType: ticketType
+        });
+      }
+    }
+  }
+
+  // Flatten the array and prioritize ticket types (VIP first, then others)
+  let prioritizedAttendees = [];
+  prioritizedAttendees.push(...grouped["VIP"]);
+  prioritizedAttendees.push(...grouped["Couples"]);
+  prioritizedAttendees.push(...grouped["Singles"]);
+  prioritizedAttendees.push(...grouped["Group of five"]);
+  prioritizedAttendees.push(...grouped["SEBE staff"]);
+  prioritizedAttendees.push(...grouped["Professionals"]);
+  prioritizedAttendees.push(...grouped["Other"]); // Fallback to "Other"
+
+  // Define the table headers
+  const headers = [["S/No", "Name of Attendee", "Contact", "Ticket Type", "Signature"]];
+
+  // Prepare the table data
+  const tableData = prioritizedAttendees.map((a, i) => [
+    i + 1,
+    a.name,
+    a.contact,
+    a.ticketType,
+    ""
+  ]);
+
+  // Add the table to the PDF with adjusted margins
+  doc.autoTable({
+    startY: 60, // Adjust the starting Y-position to reduce top margin
+    head: headers,
+    body: tableData,
+    theme: "grid",
+    styles: { fontSize: 10 },
+    margin: { top: 20, left: 14, right: 14 }, // Reduced top margin
+  });
+
+  // Save the generated PDF
+  doc.save("ESA_Dinner_Attendees_List 2025.pdf");
+});
 
     loadSellers();
   </script>
