@@ -101,6 +101,7 @@
     <div class="totals" id="summaryData"></div>
     <button id="exportBtn">Export to Excel</button>
   </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -216,16 +217,11 @@
       summary += `<br><strong>Total Amount to Account For: KES ${grandTotal.toFixed(2)}</strong>`;
       summaryData.innerHTML = summary;
     }
-
-    function exportTableToExcel(tableID, filename = '') {
-      const downloadLink = document.createElement("a");
-      const table = document.getElementById(tableID);
-      const html = table.outerHTML.replace(/ /g, '%20');
-      filename = filename ? filename + '.xls' : 'excel_data.xls';
-      downloadLink.href = 'data:application/vnd.ms-excel,' + html;
-      downloadLink.download = filename;
-      downloadLink.click();
-    }
+    function exportTableToExcel(tableID, filename = 'sales_data') {
+  const table = document.getElementById(tableID);
+  const workbook = XLSX.utils.table_to_book(table, {sheet: "Sales"});
+  XLSX.writeFile(workbook, `${filename}.xlsx`);
+}
 
     document.getElementById("exportBtn").addEventListener("click", () => {
       const title = sellerNameHeader.innerText.replace(/ /g, "_");
